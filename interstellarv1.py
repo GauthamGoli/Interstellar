@@ -27,6 +27,7 @@ def main():
     playerspeed = 0
     score = 0
     shotspeed = 10
+    gameStatus = 1
     asteroidspeed = [4,3,1]
     asteroidsize = [30,40,50]
     
@@ -75,35 +76,36 @@ def main():
                 forward = True
             if event.type == KEYUP and event.key == K_UP:
                 forward = False
-        if clockwise:
-            increment = -8
-        if anticlockwise:
-            increment = 8
-        if not (clockwise and anticlockwise and forward):
-            rotatedplayer = pygame.transform.rotate(playerImage,degree)
-            rotatedrect = rotatedplayer.get_rect()
-            rotatedrect.center = (playerx,playery)
-        if clockwise or anticlockwise:
-            degree+=increment
-            rotatedplayer = pygame.transform.rotate(playerImage,degree)
-            rotatedrect = rotatedplayer.get_rect()
-            rotatedrect.center = (playerx,playery)
-        if forward:
-            if playerx == WINDOWWIDTH/2 and playery == WINDOWHEIGHT/2:
+        if gameStatus:
+            if clockwise:
+                increment = -8
+            if anticlockwise:
+                increment = 8
+            if not (clockwise and anticlockwise and forward):
                 rotatedplayer = pygame.transform.rotate(playerImage,degree)
-                rotatedrect = pygame.transform.rotate(playerImage,degree).get_rect()
+                rotatedrect = rotatedplayer.get_rect()
                 rotatedrect.center = (playerx,playery)
-            if playerspeed:
-                motionangle1,motiondirection1 = motionangle,motiondirection
-                motionangle,motiondirection = getAngleDirection(degree)
-                playerspeed,motionangle,motiondirection = getResultantspeed(motionangle1,motiondirection1,motionangle,motiondirection,playerspeed)
-            else:
-                motionangle,motiondirection = getAngleDirection(degree)
-                playerspeed = 0.5
-        playerx2,playery2 = moveEntity([motionangle,motiondirection,playerx,playery,playerspeed])
-        playerx,playery = playerx2,playery2
-        rotatedrect.center = (playerx,playery)
-        if shots and maxshots:
+            if clockwise or anticlockwise:
+                degree+=increment
+                rotatedplayer = pygame.transform.rotate(playerImage,degree)
+                rotatedrect = rotatedplayer.get_rect()
+                rotatedrect.center = (playerx,playery)
+            if forward:
+                if playerx == WINDOWWIDTH/2 and playery == WINDOWHEIGHT/2:
+                    rotatedplayer = pygame.transform.rotate(playerImage,degree)
+                    rotatedrect = pygame.transform.rotate(playerImage,degree).get_rect()
+                    rotatedrect.center = (playerx,playery)
+                if playerspeed:
+                    motionangle1,motiondirection1 = motionangle,motiondirection
+                    motionangle,motiondirection = getAngleDirection(degree)
+                    playerspeed,motionangle,motiondirection = getResultantspeed(motionangle1,motiondirection1,motionangle,motiondirection,playerspeed)
+                else:
+                    motionangle,motiondirection = getAngleDirection(degree)
+                    playerspeed = 0.5
+            playerx2,playery2 = moveEntity([motionangle,motiondirection,playerx,playery,playerspeed])
+            playerx,playery = playerx2,playery2
+            rotatedrect.center = (playerx,playery)
+        if shots and maxshots and gameStatus:
             totalshots.append(createShot(playerx,playery,degree))
             maxshots = 0                   # maxshots variable is to make sure that only one shot is fired per one key stroke
         for shot in totalshots:
@@ -147,6 +149,12 @@ def main():
                     asteroids.remove(asteroid)
                     score += 50
                     break
+            if asteroid[6].colliderect(rotatedrect):
+                gameStatus = 0
+                showGameOverScreen()
+                
+        if not gameStatus:
+            showGameOverScreen()
         updateScore(score)        
         pygame.display.update()
         FPSCLOCK.tick(FPS)
@@ -173,6 +181,10 @@ def getResultantspeed(motionangle1,motiondirection1,motionangle,motiondirection,
     elif (vx<0 and vy<0) or (vx<0 and vy==0):
         resultantdirection = BOTTOMLEFT
     return resultantspeed,resultantangle,resultantdirection
+
+def showGameOverScreen():
+    textSurf, textRect = drawText(' GAME OVER! Press ESC to exit.',WHITE,'Agency FB',24,WINDOWWIDTH/2-40,WINDOWHEIGHT/2)
+    DISPLAYSURF.blit(textSurf, textRect)
 
 def updateScore(score):
     scoreSurface,scoreRect = drawText("SCORE: "+str(score),WHITE,'Agency FB',16,WINDOWWIDTH-50,20)
