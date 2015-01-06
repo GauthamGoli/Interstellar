@@ -25,6 +25,7 @@ def main():
     degree = 0.00000001 # instead of 0 to fix the initial stuck and static shots bug
 
     playerspeed = 0
+    score = 0
     shotspeed = 10
     asteroidspeed = [4,3,1]
     asteroidsize = [30,40,50]
@@ -133,17 +134,20 @@ def main():
                         for i in range(3): #3 asteroid fragments seperate out
                             asteroids.append(makeAsteroids(30,asteroid[6].centerx,asteroid[6].centery)) 
                         asteroids.remove(asteroid)
+                        score += 75
                         break
                     elif asteroid[6].height==40:
                         totalshots.remove(shot)
                         asteroids.append(makeAsteroids(30,asteroid[6].centerx,asteroid[6].centery))
                         asteroids.append(makeAsteroids(30,asteroid[6].centerx,asteroid[6].centery))
                         asteroids.remove(asteroid)
+                        score += 75
                         break
                     totalshots.remove(shot)
                     asteroids.remove(asteroid)
+                    score += 50
                     break
-                
+        updateScore(score)        
         pygame.display.update()
         FPSCLOCK.tick(FPS)
 
@@ -169,7 +173,10 @@ def getResultantspeed(motionangle1,motiondirection1,motionangle,motiondirection,
     elif (vx<0 and vy<0) or (vx<0 and vy==0):
         resultantdirection = BOTTOMLEFT
     return resultantspeed,resultantangle,resultantdirection
-        
+
+def updateScore(score):
+    scoreSurface,scoreRect = drawText("SCORE: "+str(score),WHITE,'Agency FB',16,WINDOWWIDTH-50,20)
+    DISPLAYSURF.blit(scoreSurface,scoreRect)
 def getComponents(speed,direction,angle):
     if direction == TOPRIGHT:
         x = speed*cos(radians(angle))
@@ -201,7 +208,13 @@ def makeAsteroids(asteroidsize,x,y):
             x, y = random.choice(range(WINDOWWIDTH)), WINDOWHEIGHT
     asteroidRect.center = (x,y)
     angle = random.choice(range(1,90))
-    direction = random.choice([7,9,1,3])
+    # The following code is to make sure that the asteroid doesnt get stuck in a small "loop?" 
+    if (y==0 and x>320) or (x==640 and y<240) or (x==0 and y>240) or (y==480 and x<320):
+        direction = random.choice([1,9])
+    elif (y==0 and x<320) or (x==0 and y<240) or (y>240 and x==640) or (x>320 and y==480):
+        direction = random.choice([3,7])
+    else:
+        direction = random.choice([7,9,1,3])
     speed = random.choice(asteroidspeed)
     return [angle,direction,x,y,speed,asteroidSurf,asteroidRect]
 
