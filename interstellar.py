@@ -1,6 +1,7 @@
 import pygame, random, sys, time
 from pygame.locals import *
 from math import *
+from start import *
 
 FPS = 30
 WINDOWWIDTH = 640
@@ -28,27 +29,24 @@ def main():
     score = 0
     shotspeed = 10
     gameStatus = 1
-    asteroidspeed = [4,3,1]
+    lives = 3
+    asteroidspeed = [3.5,3,1]
     asteroidsize = [30,40,50]
+    invulnerableMode,flaseIsOn = False,False
     
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH,WINDOWHEIGHT))
-    pygame.display.set_caption('Interstellar!')
-    surfaceobj,rectobj = drawText('INTERSTELLAR',WHITE,'Agency FB',48,WINDOWWIDTH/2-10,WINDOWHEIGHT/2-10)
-    DISPLAYSURF.blit(surfaceobj,rectobj)
-    surfaceobj,rectobj = drawText('Press any key to continue to game..',WHITE,'Agency FB',24,WINDOWWIDTH/2,WINDOWHEIGHT/2+40)
-    DISPLAYSURF.blit(surfaceobj,rectobj)
-    pygame.display.update()
 
-    waitforinput()
+    showStartScreen()
 
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH,WINDOWHEIGHT))
     pygame.display.set_caption('Interstellar')
     playerRect = pygame.Rect(WINDOWWIDTH/2-40,WINDOWHEIGHT/2,25,25)
     playerImage = pygame.image.load('player1.png')
     playerRect.center = (playerx,playery)
-    shotsound = pygame.mixer.Sound('badswap.wav')
+    shotsound = pygame.mixer.Sound('fire.wav')
+    bangsound = pygame.mixer.Sound('blast.wav')
     totalshots = []
     asteroids = []
     check = time.time()
@@ -76,7 +74,7 @@ def main():
                 forward = True
             if event.type == KEYUP and event.key == K_UP:
                 forward = False
-        if gameStatus:
+        if gameStatus :
             if clockwise:
                 increment = -8
             if anticlockwise:
@@ -107,12 +105,15 @@ def main():
             rotatedrect.center = (playerx,playery)
         if shots and maxshots and gameStatus:
             totalshots.append(createShot(playerx,playery,degree))
+            shotsound.play()
             maxshots = 0                   # maxshots variable is to make sure that only one shot is fired per one key stroke
         for shot in totalshots:
             centerx2,centery2 = updateShotPos(shot)
             shot[1].centerx, shot[1].centery = centerx2,centery2
         DISPLAYSURF.fill(BGCOLOR)
-        DISPLAYSURF.blit(rotatedplayer,rotatedrect)
+        flashIsOn = round(time.time(),1)*10%2==1  # flashing for 1/10th of a second
+        if gameStatus and not(invulnerableMode and flashIsOn):
+            DISPLAYSURF.blit(rotatedplayer,rotatedrect)
         if len(asteroids)<10 and time.time()-check>=1.5:
             asteroids.append(makeAsteroids(random.choice(asteroidsize),x=None,y=None))
             check = time.time()
@@ -131,6 +132,7 @@ def main():
             for shot in totalshots[:]:
                 # shot's data structure [projectileSurf,projectilRect, degree]
                 if asteroid[6].colliderect(shot[1]):
+                    bangsound.play()
                     if asteroid[6].height==50:
                         totalshots.remove(shot)
                         for i in range(3): #3 asteroid fragments seperate out
@@ -149,13 +151,22 @@ def main():
                     asteroids.remove(asteroid)
                     score += 50
                     break
-            if asteroid[6].colliderect(rotatedrect):
+            if asteroid[6].colliderect(rotatedrect) and lives==1 and not invulnerableMode:
+                lives=0
                 gameStatus = 0
                 showGameOverScreen()
+            elif asteroid[6].colliderect(rotatedrect) and not invulnerableMode:
+                lives-=1
+                asteroids.remove(asteroid)
+                invulnerableStartTime = time.time()
+                invulnerableMode = True
+            elif invulnerableMode and time.time()-invulnerableStartTime>2.5:
+                invulnerableMode = False
                 
         if not gameStatus:
             showGameOverScreen()
-        updateScore(score)        
+            
+        updateScore(score,lives)        
         pygame.display.update()
         FPSCLOCK.tick(FPS)
 
@@ -171,6 +182,10 @@ def getResultantspeed(motionangle1,motiondirection1,motionangle,motiondirection,
     vx = ux1 + ux2
     vy = uy1 + uy2
     resultantspeed = sqrt(vx*vx + vy*vy)
+    if resultantspeed>5:
+        vx,vy = ux1,uy1
+        resultantspeed = playerspeed
+    #resultantspeed = playerspeed
     resultantangle = degrees(atan(abs(vy)/abs(vx)))
     if (vx>0 and vy>0) or (vx>0 and vy==0):
         resultantdirection = TOPRIGHT
@@ -183,12 +198,25 @@ def getResultantspeed(motionangle1,motiondirection1,motionangle,motiondirection,
     return resultantspeed,resultantangle,resultantdirection
 
 def showGameOverScreen():
-    textSurf, textRect = drawText(' GAME OVER! Press ESC to exit.',WHITE,'Agency FB',24,WINDOWWIDTH/2-40,WINDOWHEIGHT/2)
+    textSurf, textRect = drawText(' GAME OVER. ESC: Exit',WHITE,'Agency FB',24,WINDOWWIDTH/2-40,WINDOWHEIGHT/2)
     DISPLAYSURF.blit(textSurf, textRect)
+    
 
-def updateScore(score):
+def updateScore(score,lives):
+    livRect1 = pygame.Rect(WINDOWWIDTH-60,40,10,10)
+    livRect2 = pygame.Rect(WINDOWWIDTH-60,40,10,10)
+    livRect3 = pygame.Rect(WINDOWWIDTH-60,40,10,10)
+    livs,offset = [livRect1,livRect2,livRect3],0
+    livImage = pygame.image.load('player1.png')
     scoreSurface,scoreRect = drawText("SCORE: "+str(score),WHITE,'Agency FB',16,WINDOWWIDTH-50,20)
+    liveSurf,livesRect = drawText("SHIPS LEFT: ",WHITE,'Agency FB',16,WINDOWWIDTH-85,40)
     DISPLAYSURF.blit(scoreSurface,scoreRect)
+    DISPLAYSURF.blit(liveSurf,livesRect)
+    for livRect in livs[:lives]:
+        offset+=18
+        livRect.center = (WINDOWWIDTH-75+offset,35)
+        DISPLAYSURF.blit(livImage,livRect)
+    
 def getComponents(speed,direction,angle):
     if direction == TOPRIGHT:
         x = speed*cos(radians(angle))

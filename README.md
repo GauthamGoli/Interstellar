@@ -1,1 +1,0 @@
-This is a python version of the Atari, Inc's Asteroids. It could have been better to use an Object Oriented approach, but I was just trying to get my hands dirty with pygame first and write a game from scratch. The Designing is akward, suggestions are welcome!
